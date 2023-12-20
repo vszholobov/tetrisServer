@@ -37,9 +37,9 @@ func (playerSession *PlayerSession) processGameField() {
 			gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
 			gameField.SelectNextPiece()
 			if !gameField.CurrentPiece.CanMoveDown() {
-				// TODO: Player lost
+				// TODO: Signal "Game Over"
 				playerSession.isEnded = true
-				playerSession.conn.WriteMessage(websocket.TextMessage, []byte("Lost"))
+				playerSession.conn.WriteMessage(websocket.TextMessage, []byte("0"))
 				playerSession.conn.Close()
 				//endMessage := "Game over. Stats:"
 				//fmt.Println(endMessage)
@@ -76,7 +76,7 @@ func (playerSession *PlayerSession) inputControl() {
 	for {
 		//PrintField(gameField)
 		// TODO: send field
-		playerSession.conn.WriteMessage(websocket.TextMessage, []byte(gameField.Val.String()))
+		playerSession.conn.WriteMessage(websocket.TextMessage, []byte("1"+gameField.String()))
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {

@@ -1,29 +1,15 @@
 package field
 
 import (
-	"fmt"
 	"math/big"
 	"math/rand"
-	"strconv"
-	"strings"
 )
 
 const FieldWidth = 12
 const FieldHeight = 21
-const moveToTopASCII = "\033[22A"
-const moveRightASCII = "\r\033[36C"
-const moveDownOneLineASCII = "\r\033[1B"
-const moveDownAllLinesASCII = "\r\033[17B"
 
 var fullLine, _ = big.NewInt(0).SetString("111111111111", 2)
 var emptyLine, _ = big.NewInt(0).SetString("100000000001", 2)
-
-// ############
-// #          #
-// #          #
-// #          #
-// #          #
-// ############
 
 type Field struct {
 	Val          *big.Int
@@ -74,10 +60,8 @@ func (gameField *Field) SelectNextPiece() {
 }
 
 func (gameField *Field) String() string {
-	newField := big.NewInt(0).Set(gameField.Val)
-	newShape := big.NewInt(0).Set(gameField.CurrentPiece.GetVal())
-	newField.Or(newField, newShape)
-	return fmt.Sprintf("%b", newField)
+	newField := big.NewInt(0).Or(gameField.Val, gameField.CurrentPiece.GetVal())
+	return newField.String()
 }
 
 func (gameField *Field) Clean() {
@@ -132,61 +116,6 @@ func (gameField *Field) Intersects(pieceVal *big.Int) bool {
 	newField := big.NewInt(0).Set(gameField.Val)
 	newShape := big.NewInt(0).Set(pieceVal)
 	return newField.And(newField, newShape).Cmp(big.NewInt(0)) != 0
-}
-
-func CopyBigInt(val *big.Int) *big.Int {
-	return big.NewInt(0).Set(val)
-}
-
-var builder = strings.Builder{}
-
-func PrintField(field *Field) {
-	builder.Reset()
-	builder.WriteString(moveToTopASCII)
-	fieldStr := field.String()
-	for i := 20; i >= 0; i-- {
-		line := fieldStr[i*12 : i*12+12]
-		line = strings.ReplaceAll(line, "1", " Ж ")
-		line = strings.ReplaceAll(line, "0", "   ")
-		builder.WriteString(line)
-		builder.WriteString("\n")
-	}
-	builder.WriteString("Score: ")
-	builder.WriteString(strconv.Itoa(*field.Score))
-	builder.WriteString(" | Speed: ")
-	builder.WriteString(strconv.Itoa(field.GetSpeed()))
-	builder.WriteString(" | Cleaned: ")
-	builder.WriteString(strconv.Itoa(*field.CleanCount))
-	fmt.Println(builder.String())
-	printNextPiece(field.NextPiece)
-}
-
-func printNextPiece(nextPiece *Piece) {
-	//pieceVal := nextPiece.GetVal()
-
-	fmt.Print(moveToTopASCII + moveRightASCII + " ##############")
-	fmt.Printf(moveDownOneLineASCII + moveRightASCII + " #            #")
-	pieceLines := RepresentationByType[nextPiece.pieceType]
-	for i := 0; i < 2; i++ {
-		curLine := "            "
-		if i < len(pieceLines) {
-			curLine = pieceLines[i]
-		}
-		fmt.Printf(moveDownOneLineASCII+moveRightASCII+" #%s#", curLine)
-		//curLine := big.NewInt(0).Lsh(fullLine, uint(i)*FieldWidth)
-		//checkCurrLine := big.NewInt(0).And(curLine, nextPiece.GetVal())
-		//line := fmt.Sprintf("%10b", checkCurrLine)
-		//line = strings.ReplaceAll(line, "1", "Ж")
-		//line = strings.ReplaceAll(line, "0", "")
-		//fmt.Print(moveDownOneLineASCII + moveRightASCII + " #          #")
-	}
-	fmt.Printf(moveDownOneLineASCII + moveRightASCII + " #            #")
-	fmt.Print(moveDownOneLineASCII + moveRightASCII + " ##############")
-	fmt.Print(moveDownAllLinesASCII)
-
-	//fmt.Print(moveDownOneLineASCII + moveRightASCII + " #          #")
-	//fmt.Print(moveDownOneLineASCII + moveRightASCII + " #          #")
-	//fmt.Print(moveDownOneLineASCII + moveRightASCII + " #          #")
 }
 
 func (gameField *Field) GetSpeed() int {

@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"tetrisServer/field"
-	"time"
 )
 
 var Addr = flag.String("addr", "localhost:8080", "http service address")
@@ -24,75 +23,6 @@ func Echo(w http.ResponseWriter, r *http.Request) {
 	gameField := field.MakeDefaultField()
 	session := field.MakePlayerSession(&gameField, conn)
 	session.RunSession()
-
-	//keyboardSendChannel := make(chan rune)
-	//go func(gameField *field.Field, keyboardInputChannel chan rune) {
-	//	for {
-	//		inputControl(keyboardInputChannel, gameField)
-	//
-	//		if !gameField.CurrentPiece.MoveDown() {
-	//			gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
-	//			gameField.SelectNextPiece()
-	//			if !gameField.CurrentPiece.CanMoveDown() {
-	//				// TODO: Player lost
-	//				field.CallClear()
-	//				fmt.Println("Game over. Stats:")
-	//				fmt.Printf("Score: %d | Speed: %d | Lines Cleand: %d\n", *gameField.Score, gameField.GetSpeed(), *gameField.CleanCount)
-	//				break
-	//			}
-	//			gameField.Clean()
-	//		}
-	//	}
-	//}(&extField, keyboardSendChannel)
-	//go func(conn *websocket.Conn) {
-	//	for {
-	//		_, message, err := conn.ReadMessage()
-	//		if err != nil {
-	//			//log.Println("read:", err)
-	//			break
-	//		}
-	//		decodeRune, _ := utf8.DecodeRune(message)
-	//		keyboardSendChannel <- decodeRune
-	//		log.Printf("recv: %s", message)
-	//		//err = conn.WriteMessage(mt, message)
-	//		//if err != nil {
-	//		//	log.Println("write:", err)
-	//		//	break
-	//		//}
-	//	}
-	//}(conn)
-}
-
-func inputControl(
-	keyboardInputChannel chan rune,
-	gameField *field.Field,
-) {
-	timeout := time.After(time.Second / 4 / time.Duration(gameField.GetSpeed()))
-	for {
-		field.PrintField(gameField)
-		select {
-		case moveType := <-keyboardInputChannel:
-			switch moveType {
-			case 100:
-				// d
-				gameField.CurrentPiece.MoveLeft()
-			case 97:
-				// a
-				gameField.CurrentPiece.MoveRight()
-			case 115:
-				// s
-				gameField.CurrentPiece.MoveDown()
-			case 113:
-				// q
-				gameField.CurrentPiece.Rotate(field.Left)
-			case 101:
-				// e
-				gameField.CurrentPiece.Rotate(field.Right)
-			}
-		case <-timeout:
-			return
-		}
-	}
 }
 
 func Home(w http.ResponseWriter, r *http.Request) {
