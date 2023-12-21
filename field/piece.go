@@ -113,16 +113,6 @@ var rotationsByType = map[PieceType][]*big.Int{
 	SquareShape: {big.NewInt(393312)},
 }
 
-var RepresentationByType = map[PieceType][]string{
-	TShape:      {"      Ж     ", "     ЖЖЖ    "},
-	ZigZagRight: {"      ЖЖ    ", "     ЖЖ     "},
-	ZigZagLeft:  {"     ЖЖ     ", "      ЖЖ    "},
-	IShape:      {"    ЖЖЖЖ    "},
-	RightLShape: {"    ЖЖЖ     ", "    Ж       "},
-	LeftLShape:  {"    ЖЖЖ     ", "      Ж     "},
-	SquareShape: {"     ЖЖ     ", "     ЖЖ     "},
-}
-
 type RotationType int
 
 const (

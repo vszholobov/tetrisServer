@@ -78,8 +78,8 @@ func (playerSession *PlayerSession) inputControl() {
 		// TODO: send field
 		playerSession.conn.WriteMessage(
 			websocket.TextMessage,
-			[]byte(fmt.Sprintf("%d %s %d %d %d",
-				1, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount)))
+			[]byte(fmt.Sprintf("%d %s %d %d %d %d",
+				1, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.pieceType)))
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
