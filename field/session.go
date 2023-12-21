@@ -1,6 +1,7 @@
 package field
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
 	"time"
@@ -37,7 +38,6 @@ func (playerSession *PlayerSession) processGameField() {
 			gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
 			gameField.SelectNextPiece()
 			if !gameField.CurrentPiece.CanMoveDown() {
-				// TODO: Signal "Game Over"
 				playerSession.isEnded = true
 				playerSession.conn.WriteMessage(websocket.TextMessage, []byte("0"))
 				playerSession.conn.Close()
@@ -76,7 +76,10 @@ func (playerSession *PlayerSession) inputControl() {
 	for {
 		//PrintField(gameField)
 		// TODO: send field
-		playerSession.conn.WriteMessage(websocket.TextMessage, []byte("1"+gameField.String()))
+		playerSession.conn.WriteMessage(
+			websocket.TextMessage,
+			[]byte(fmt.Sprintf("%d %s %d %d %d",
+				1, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount)))
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
