@@ -9,7 +9,7 @@ import (
 	"tetrisServer/field"
 )
 
-var Addr = flag.String("addr", "localhost:8080", "http service address")
+var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
 
 var upgrader = websocket.Upgrader{} // use default options
 
