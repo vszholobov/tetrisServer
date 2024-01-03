@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
+	"math/rand"
 	"time"
 	"unicode/utf8"
 )
 
 type GameSession struct {
-	firstPlayerSession  *PlayerSession
-	secondPlayerSession *PlayerSession
+	sessionId           int64
+	FirstPlayerSession  *PlayerSession
+	SecondPlayerSession *PlayerSession
 }
 
 type PlayerSession struct {
@@ -18,10 +20,35 @@ type PlayerSession struct {
 	conn               *websocket.Conn
 	playerInputChannel chan rune
 	isEnded            bool
+	pieceGenerator     *rand.Rand
 }
 
-func MakePlayerSession(playerField *Field, conn *websocket.Conn) PlayerSession {
-	return PlayerSession{playerField: playerField, conn: conn, playerInputChannel: make(chan rune), isEnded: false}
+func MakeGameSession() *GameSession {
+	sessionId := time.Now().Unix()
+	return &GameSession{
+		sessionId: sessionId,
+	}
+}
+
+func MakePlayerSession(conn *websocket.Conn, pieceGenerator *rand.Rand) *PlayerSession {
+	field := MakeDefaultField(pieceGenerator)
+	session := PlayerSession{
+		playerField:        &field,
+		conn:               conn,
+		playerInputChannel: make(chan rune),
+		isEnded:            false,
+		pieceGenerator:     pieceGenerator,
+	}
+	return &session
+}
+
+func (gameSession *GameSession) RunSession() {
+	gameSession.FirstPlayerSession.RunSession()
+	gameSession.SecondPlayerSession.RunSession()
+}
+
+func (gameSession *GameSession) GetSessionId() int64 {
+	return gameSession.sessionId
 }
 
 func (playerSession *PlayerSession) RunSession() {

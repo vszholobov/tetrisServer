@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"tetrisServer/server"
@@ -11,7 +12,9 @@ import (
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
-	http.HandleFunc("/echo", server.Echo)
-	http.HandleFunc("/", server.Home)
-	log.Fatal(http.ListenAndServe(*server.Addr, nil))
+	router := mux.NewRouter()
+	router.HandleFunc("/create", server.CreateSession)
+	router.HandleFunc("/connect/{sessionId}", server.ConnectToSession)
+	//http.HandleFunc("/", server.Home)
+	log.Fatal(http.ListenAndServe(*server.Addr, router))
 }

@@ -2,31 +2,65 @@ package server
 
 import (
 	"flag"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
+	"math/big"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"tetrisServer/field"
 )
 
+// var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
 var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
 
 var upgrader = websocket.Upgrader{} // use default options
+var sessions = make(map[int64]*field.GameSession)
 
-func Echo(w http.ResponseWriter, r *http.Request) {
+//func Echo(w http.ResponseWriter, r *http.Request) {
+//	conn, err := upgrader.Upgrade(w, r, nil)
+//	if err != nil {
+//		log.Print("upgrade:", err)
+//		return
+//	}
+//	gameSession := field.MakeGameSession()
+//	sessions[gameSession.GetSessionId()] = gameSession
+//	//gameSession.RunSession()
+//	//session := field.MakePlayerSession(conn)
+//	//session.RunSession()
+//}
+
+func CreateSession(w http.ResponseWriter, r *http.Request) {
+	gameSession := field.MakeGameSession()
+	sessions[gameSession.GetSessionId()] = gameSession
+	w.Write(big.NewInt(gameSession.GetSessionId()).Bytes())
+	//homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
+}
+
+func ConnectToSession(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
+	session := sessions[sessionId]
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
 	}
 
-	gameField := field.MakeDefaultField()
-	session := field.MakePlayerSession(&gameField, conn)
-	session.RunSession()
-}
+	if session.FirstPlayerSession == nil {
+		firstPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
+		firstPlayerSession := field.MakePlayerSession(conn, firstPlayerPieceGenerator)
+		session.FirstPlayerSession = firstPlayerSession
+	} else {
+		secondPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
+		secondPlayerSession := field.MakePlayerSession(conn, secondPlayerPieceGenerator)
+		session.SecondPlayerSession = secondPlayerSession
+		session.RunSession()
+	}
 
-func Home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
 }
 
 var homeTemplate = template.Must(template.New("").Parse(`
