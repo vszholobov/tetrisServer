@@ -2,17 +2,19 @@ package field
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"math/rand"
 	"time"
 	"unicode/utf8"
+
+	"github.com/gorilla/websocket"
 )
 
 type GameSession struct {
 	sessionId           int64
 	FirstPlayerSession  *PlayerSession
 	SecondPlayerSession *PlayerSession
+	Started             bool
 }
 
 type PlayerSession struct {

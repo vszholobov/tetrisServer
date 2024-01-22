@@ -1,16 +1,17 @@
 package server
 
 import (
+	"encoding/json"
 	"flag"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
-	"math/big"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"tetrisServer/field"
+
+	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 // var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
@@ -32,10 +33,22 @@ var sessions = make(map[int64]*field.GameSession)
 //	//session.RunSession()
 //}
 
+type CreateSessionResponse struct {
+	SessionId int64 `json:"sessionId"`
+}
+
+func GetSessionsList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sessions)
+}
+
 func CreateSession(w http.ResponseWriter, r *http.Request) {
 	gameSession := field.MakeGameSession()
 	sessions[gameSession.GetSessionId()] = gameSession
-	w.Write(big.NewInt(gameSession.GetSessionId()).Bytes())
+	response := CreateSessionResponse{SessionId: gameSession.GetSessionId()}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+	//w.Write(big.NewInt(gameSession.GetSessionId()).Bytes())
 	//homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
 }
 
@@ -43,6 +56,12 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
 	session := sessions[sessionId]
+
+	if session.Started {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Session already started"))
+		return
+	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -58,6 +77,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		secondPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		secondPlayerSession := field.MakePlayerSession(conn, secondPlayerPieceGenerator)
 		session.SecondPlayerSession = secondPlayerSession
+		session.Started = true
 		session.RunSession()
 	}
 
