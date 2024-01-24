@@ -76,11 +76,33 @@ func (playerSession *PlayerSession) processGameField() {
 			gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
 			gameField.SelectNextPiece()
 			if !gameField.CurrentPiece.CanMoveDown() {
+				// TODO: race
 				playerSession.isEnded = true
-				playerSession.SendMessage("0 0")
-				// TODO: send enemy notification that player lost
-				playerSession.conn.Close()
+				if playerSession.EnemySession.isEnded {
+					playerScore := *playerSession.playerField.Score
+					enemyScore := *playerSession.EnemySession.playerField.Score
+
+					if playerScore > enemyScore {
+						playerSession.SendMessage("0 0 WIN!")
+						playerSession.EnemySession.SendMessage("0 0 LOSE(")
+					} else if enemyScore > playerScore {
+						playerSession.SendMessage("0 0 LOSE()")
+						playerSession.EnemySession.SendMessage("0 0 WIN!")
+					} else {
+						playerSession.SendMessage("0 0 DRAW=")
+						playerSession.EnemySession.SendMessage("0 0 DRAW=")
+					}
+
+					playerSession.EnemySession.conn.Close()
+					playerSession.conn.Close()
+				} else {
+					// add last piece to field to not lose it
+					gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
+					playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
+					playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
+				}
 				break
+				// playerSession.conn.Close()
 			}
 			gameField.Clean()
 		}
@@ -112,9 +134,11 @@ func (playerSession *PlayerSession) inputControl() {
 	for {
 		//PrintField(gameField)
 		// TODO: send enemy field to enemy session with id (self = 0, enemy = 1)
-		message := fmt.Sprintf("%d %s %d %d %d %d", 1, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.pieceType)
-		playerSession.SendMessage("0 " + message)
-		playerSession.EnemySession.SendMessage("1 " + message)
+		// message := fmt.Sprintf("%d %s %d %d %d %d", 1, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.pieceType)
+		// playerSession.SendMessage("0 " + message)
+		// playerSession.EnemySession.SendMessage("1 " + message)
+		playerSession.SendMessage(FormatFieldMessage(0, 1, gameField))
+		playerSession.EnemySession.SendMessage(FormatFieldMessage(1, 1, gameField))
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {
@@ -138,4 +162,8 @@ func (playerSession *PlayerSession) inputControl() {
 			return
 		}
 	}
+}
+
+func FormatFieldMessage(isEnemyField int, isAlive int, gameField *Field) string {
+	return fmt.Sprintf("%d %d %s %d %d %d %d", isEnemyField, isAlive, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.pieceType)
 }
