@@ -77,11 +77,9 @@ func (playerSession *PlayerSession) processGameField() {
 			gameField.SelectNextPiece()
 			if !gameField.CurrentPiece.CanMoveDown() {
 				playerSession.isEnded = true
-				playerSession.conn.WriteMessage(websocket.TextMessage, []byte("0"))
+				playerSession.SendMessage("0 0")
+				// TODO: send enemy notification that player lost
 				playerSession.conn.Close()
-				//endMessage := "Game over. Stats:"
-				//fmt.Println(endMessage)
-				//fmt.Printf("Score: %d | Speed: %d | Lines Cleand: %d\n", *gameField.Score, gameField.GetSpeed(), *gameField.CleanCount)
 				break
 			}
 			gameField.Clean()
