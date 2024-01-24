@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -23,6 +24,8 @@ type PlayerSession struct {
 	playerInputChannel chan rune
 	isEnded            bool
 	pieceGenerator     *rand.Rand
+	EnemySession       *PlayerSession
+	mu                 sync.Mutex
 }
 
 func MakeGameSession() *GameSession {
@@ -51,6 +54,12 @@ func (gameSession *GameSession) RunSession() {
 
 func (gameSession *GameSession) GetSessionId() int64 {
 	return gameSession.sessionId
+}
+
+func (playerSession *PlayerSession) SendMessage(message string) {
+	playerSession.mu.Lock()
+	defer playerSession.mu.Unlock()
+	playerSession.conn.WriteMessage(websocket.TextMessage, []byte(message))
 }
 
 func (playerSession *PlayerSession) RunSession() {
@@ -104,11 +113,10 @@ func (playerSession *PlayerSession) inputControl() {
 	timeout := time.After(time.Second / 4 / time.Duration(gameField.GetSpeed()))
 	for {
 		//PrintField(gameField)
-		// TODO: send field
-		playerSession.conn.WriteMessage(
-			websocket.TextMessage,
-			[]byte(fmt.Sprintf("%d %s %d %d %d %d",
-				1, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.pieceType)))
+		// TODO: send enemy field to enemy session with id (self = 0, enemy = 1)
+		message := fmt.Sprintf("%d %s %d %d %d %d", 1, gameField.String(), gameField.GetSpeed(), *gameField.Score, *gameField.CleanCount, gameField.NextPiece.pieceType)
+		playerSession.SendMessage("0 " + message)
+		playerSession.EnemySession.SendMessage("1 " + message)
 		select {
 		case moveType := <-playerSession.playerInputChannel:
 			switch moveType {

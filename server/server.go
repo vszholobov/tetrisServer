@@ -77,6 +77,8 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		secondPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		secondPlayerSession := field.MakePlayerSession(conn, secondPlayerPieceGenerator)
 		session.SecondPlayerSession = secondPlayerSession
+		session.FirstPlayerSession.EnemySession = secondPlayerSession
+		session.SecondPlayerSession.EnemySession = session.FirstPlayerSession
 		session.Started = true
 		session.RunSession()
 	}
