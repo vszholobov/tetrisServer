@@ -20,9 +20,19 @@ type CreateSessionResponse struct {
 	SessionId int64 `json:"sessionId"`
 }
 
+type SessionDto struct {
+	SessionId int64 `json:"sessionId"`
+	Started   bool  `json:"started"`
+}
+
 func GetSessionsList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Sessions)
+	sessionDtos := make([]SessionDto, 0)
+	for sessionId := range Sessions {
+		session := Sessions[sessionId]
+		sessionDtos = append(sessionDtos, SessionDto{SessionId: sessionId, Started: session.Started})
+	}
+	json.NewEncoder(w).Encode(sessionDtos)
 }
 
 func CreateSession(w http.ResponseWriter, r *http.Request) {
