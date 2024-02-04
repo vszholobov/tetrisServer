@@ -7,6 +7,7 @@ import (
 
 const FieldWidth = 12
 const FieldHeight = 21
+const CleanRowsCountToIncreaseSpeed = 40
 
 var fullLine, _ = big.NewInt(0).SetString("111111111111", 2)
 var emptyLine, _ = big.NewInt(0).SetString("100000000001", 2)
@@ -138,5 +139,5 @@ func (gameField *Field) Intersects(pieceVal *big.Int) bool {
 }
 
 func (gameField *Field) GetSpeed() int {
-	return *gameField.CleanCount/4 + 1
+	return *gameField.CleanCount/CleanRowsCountToIncreaseSpeed + 1
 }

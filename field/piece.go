@@ -122,7 +122,7 @@ const (
 
 type Piece struct {
 	rotationCount int
-	pieceType     PieceType
+	PieceType     PieceType
 	rotations     []*big.Int
 	field         *Field
 }
@@ -132,7 +132,7 @@ func MakePiece(field *Field, pieceType PieceType) Piece {
 	rotationsCopy := copyRotations(rotations)
 	return Piece{
 		rotationCount: 0,
-		pieceType:     pieceType,
+		PieceType:     pieceType,
 		rotations:     rotationsCopy,
 		field:         field,
 	}
@@ -164,7 +164,7 @@ func (piece *Piece) Rotate(rotationType RotationType) bool {
 }
 
 func (piece *Piece) changeRotationCount(diff int) {
-	maxRotations := len(rotationsByType[piece.pieceType])
+	maxRotations := len(rotationsByType[piece.PieceType])
 	piece.rotationCount += diff
 	if piece.rotationCount < 0 {
 		piece.rotationCount = maxRotations - 1
@@ -174,7 +174,7 @@ func (piece *Piece) changeRotationCount(diff int) {
 }
 
 func (piece *Piece) GetVal() *big.Int {
-	abs := int64(math.Abs(float64(piece.rotationCount % rotationsCntByType[piece.pieceType])))
+	abs := int64(math.Abs(float64(piece.rotationCount % rotationsCntByType[piece.PieceType])))
 	return piece.rotations[abs]
 }
 
