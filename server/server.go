@@ -5,7 +5,7 @@ import (
 	"flag"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -56,7 +56,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		log.Warn("upgrade:", err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		firstPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		firstPlayerSession := MakePlayerSession(conn, firstPlayerPieceGenerator, session)
 		session.FirstPlayerSession = firstPlayerSession
-		log.Printf("Session %d created", sessionId)
+		log.Infof("Session %d created", sessionId)
 	} else {
 		secondPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		secondPlayerSession := MakePlayerSession(conn, secondPlayerPieceGenerator, session)
@@ -73,7 +73,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		session.SecondPlayerSession.EnemySession = session.FirstPlayerSession
 		session.Started = true
 		session.RunSession()
-		log.Printf("Session %d started", sessionId)
+		log.Infof("Session %d started", sessionId)
 	}
 
 }

@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"sync"
 	"tetrisServer/field"
@@ -109,7 +109,7 @@ func (playerSession *PlayerSession) endSession(gameField *field.Field) {
 		playerSession.conn.Close()
 		sessionId := playerSession.gameSession.sessionId
 		delete(Sessions, sessionId)
-		log.Printf("Session %d ended", sessionId)
+		log.Infof("Session %d ended", sessionId)
 	} else {
 		// add last piece to field to not lose it
 		gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
@@ -127,7 +127,6 @@ func (playerSession *PlayerSession) processPlayerInput() {
 		}
 		decodeRune, _ := utf8.DecodeRune(message)
 		playerSession.playerInputChannel <- decodeRune
-		//log.Printf("Player Action: %s", message)
 	}
 }
 

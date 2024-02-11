@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"log"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"tetrisServer/server"
 
@@ -11,8 +12,11 @@ import (
 
 // https://github.com/gorilla/websocket/blob/main/examples/echo/server.go
 func main() {
+	customFormatter := new(logrus.TextFormatter)
+	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	customFormatter.FullTimestamp = true
+	logrus.SetFormatter(customFormatter)
 	flag.Parse()
-	log.SetFlags(0)
 	router := mux.NewRouter()
 	router.HandleFunc("/session", server.GetSessionsList)
 	router.HandleFunc("/session/create", server.CreateSession)
