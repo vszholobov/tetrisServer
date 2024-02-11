@@ -16,6 +16,7 @@ func main() {
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
+	logrus.SetFormatter(&logrus.JSONFormatter{})
 	flag.Parse()
 	router := mux.NewRouter()
 	router.HandleFunc("/session", server.GetSessionsList)
