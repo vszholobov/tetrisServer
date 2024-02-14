@@ -5,6 +5,8 @@ import (
 	"flag"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
@@ -15,6 +17,14 @@ var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
 
 var upgrader = websocket.Upgrader{} // use default options
 var Sessions = make(map[int64]*GameSession)
+var runningSessionsGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "running_game_sessions",
+	Help: "The total number of currently running game sessions",
+})
+var createdSessionsCounter = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "game_sessions_created",
+	Help: "The total number of created game sessions",
+})
 
 type CreateSessionResponse struct {
 	SessionId int64 `json:"sessionId"`
@@ -65,6 +75,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		firstPlayerSession := MakePlayerSession(conn, firstPlayerPieceGenerator, session)
 		session.FirstPlayerSession = firstPlayerSession
 		log.Infof("Session %d created", sessionId)
+		createdSessionsCounter.Inc()
 	} else {
 		secondPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		secondPlayerSession := MakePlayerSession(conn, secondPlayerPieceGenerator, session)
@@ -73,6 +84,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		session.SecondPlayerSession.EnemySession = session.FirstPlayerSession
 		session.Started = true
 		session.RunSession()
+		runningSessionsGauge.Inc()
 		log.Infof("Session %d started", sessionId)
 	}
 

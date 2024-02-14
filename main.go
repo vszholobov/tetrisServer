@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -22,6 +23,7 @@ func main() {
 	router.HandleFunc("/session", server.GetSessionsList)
 	router.HandleFunc("/session/create", server.CreateSession)
 	router.HandleFunc("/session/connect/{sessionId}", server.ConnectToSession)
+	router.Handle("/metrics", promhttp.Handler())
 	//http.HandleFunc("/", server.Home)
 	log.Fatal(http.ListenAndServe(*server.Addr, router))
 }

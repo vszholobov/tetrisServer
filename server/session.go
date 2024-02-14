@@ -110,6 +110,7 @@ func (playerSession *PlayerSession) endSession(gameField *field.Field) {
 		sessionId := playerSession.gameSession.sessionId
 		delete(Sessions, sessionId)
 		log.Infof("Session %d ended", sessionId)
+		runningSessionsGauge.Dec()
 	} else {
 		// add last piece to field to not lose it
 		gameField.Val.Or(gameField.Val, gameField.CurrentPiece.GetVal())
