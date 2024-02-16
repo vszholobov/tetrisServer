@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
@@ -87,5 +88,35 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		runningSessionsGauge.Inc()
 		log.Infof("Session %d started", sessionId)
 	}
+}
 
+func MeasurePing(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
+	if Sessions[sessionId] == nil {
+		log.Warn("Session {} not found", sessionId)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Warn("upgrade:", err)
+		return
+	}
+
+	go func(conn *websocket.Conn) {
+		ticker := time.NewTicker(time.Second * 3)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+					log.Error(err.Error())
+					conn.Close()
+					return
+				}
+			}
+		}
+	}(conn)
 }
