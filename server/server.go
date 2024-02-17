@@ -112,7 +112,6 @@ func MeasurePing(w http.ResponseWriter, r *http.Request) {
 			case <-ticker.C:
 				conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
 				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-					log.Error(err.Error())
 					conn.Close()
 					return
 				}
