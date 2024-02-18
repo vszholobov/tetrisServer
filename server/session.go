@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"sync"
@@ -59,10 +60,19 @@ func (gameSession *GameSession) GetSessionId() int64 {
 	return gameSession.sessionId
 }
 
+// SendMessage thread safe socket text message sending
 func (playerSession *PlayerSession) SendMessage(message string) {
 	playerSession.mu.Lock()
 	defer playerSession.mu.Unlock()
 	playerSession.conn.WriteMessage(websocket.TextMessage, []byte(message))
+}
+
+// SendPingMessage thread safe socket ping message sending
+func (playerSession *PlayerSession) SendPingMessage(pingUuid uuid.UUID) error {
+	playerSession.mu.Lock()
+	defer playerSession.mu.Unlock()
+	pingUuidBinary, _ := pingUuid.MarshalBinary()
+	return playerSession.conn.WriteMessage(websocket.PingMessage, pingUuidBinary)
 }
 
 func (playerSession *PlayerSession) RunSession() {
@@ -79,8 +89,7 @@ func (playerSession *PlayerSession) processPlayerPing() {
 		case <-ticker.C:
 			playerSession.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
 			pingUuid := PlayersPingMeasurer.addMeasure()
-			pingUuidBinary, _ := pingUuid.MarshalBinary()
-			if err := playerSession.conn.WriteMessage(websocket.PingMessage, pingUuidBinary); err != nil {
+			if err := playerSession.SendPingMessage(pingUuid); err != nil {
 				return
 			}
 		}
