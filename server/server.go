@@ -7,13 +7,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -38,25 +38,35 @@ var pingHist = promauto.NewHistogram(prometheus.HistogramOpts{
 })
 
 type PingMeasurer struct {
-	pingMeasures map[uuid.UUID]time.Time
-	mu           sync.Mutex
+	pingMeasures *ttlcache.Cache[uuid.UUID, time.Time]
 }
 
 func MakePingMeasurer() *PingMeasurer {
-	return &PingMeasurer{pingMeasures: make(map[uuid.UUID]time.Time)}
+	cache := ttlcache.New[uuid.UUID, time.Time](
+		ttlcache.WithTTL[uuid.UUID, time.Time](time.Minute),
+	)
+	return &PingMeasurer{
+		pingMeasures: cache,
+	}
 }
 
 func (pingMeasurer *PingMeasurer) addMeasure() uuid.UUID {
-	pingMeasurer.mu.Lock()
-	defer pingMeasurer.mu.Unlock()
 	pingUuid := uuid.New()
-	pingMeasurer.pingMeasures[pingUuid] = time.Now()
+	pingMeasurer.pingMeasures.Set(pingUuid, time.Now(), ttlcache.DefaultTTL)
 	return pingUuid
 }
 
 func (pingMeasurer *PingMeasurer) getMeasure(uuid uuid.UUID) (time.Time, bool) {
-	startTime, ok := pingMeasurer.pingMeasures[uuid]
-	return startTime, ok
+	startTime := pingMeasurer.pingMeasures.Get(uuid)
+	if startTime != nil {
+		return startTime.Value(), true
+	} else {
+		return time.Time{}, false
+	}
+}
+
+func (pingMeasurer *PingMeasurer) getMeasuresCount() int {
+	return pingMeasurer.pingMeasures.Len()
 }
 
 type CreateSessionResponse struct {
@@ -127,7 +137,7 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 func pongHandler(conn *websocket.Conn) func(appData string) error {
 	return func(appData string) error {
 		pingUuid, _ := uuid.FromBytes([]byte(appData))
-		if startTime, containsPingUUid := PlayersPingMeasurer.getMeasure(pingUuid); containsPingUUid {
+		if startTime, exists := PlayersPingMeasurer.getMeasure(pingUuid); exists {
 			ping := time.Since(startTime).Milliseconds()
 			pingHist.Observe(float64(ping))
 			message := fmt.Sprintf("%d %d", 2, ping)
