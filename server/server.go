@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
@@ -11,13 +13,16 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 )
 
 var Addr = flag.String("addr", "0.0.0.0:8080", "http service address")
-
 var upgrader = websocket.Upgrader{} // use default options
+
 var Sessions = make(map[int64]*GameSession)
+var PlayersPingMeasurer = MakePingMeasurer()
+
 var runningSessionsGauge = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "running_game_sessions",
 	Help: "The total number of currently running game sessions",
@@ -26,6 +31,33 @@ var createdSessionsCounter = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "game_sessions_created",
 	Help: "The total number of created game sessions",
 })
+var pingHist = promauto.NewHistogram(prometheus.HistogramOpts{
+	Name:    "ping",
+	Help:    "Ping ms distribution histogram",
+	Buckets: []float64{100, 200, 500, 1000, 2000},
+})
+
+type PingMeasurer struct {
+	pingMeasures map[uuid.UUID]time.Time
+	mu           sync.Mutex
+}
+
+func MakePingMeasurer() *PingMeasurer {
+	return &PingMeasurer{pingMeasures: make(map[uuid.UUID]time.Time)}
+}
+
+func (pingMeasurer *PingMeasurer) addMeasure() uuid.UUID {
+	pingMeasurer.mu.Lock()
+	defer pingMeasurer.mu.Unlock()
+	pingUuid := uuid.New()
+	pingMeasurer.pingMeasures[pingUuid] = time.Now()
+	return pingUuid
+}
+
+func (pingMeasurer *PingMeasurer) getMeasure(uuid uuid.UUID) (time.Time, bool) {
+	startTime, ok := pingMeasurer.pingMeasures[uuid]
+	return startTime, ok
+}
 
 type CreateSessionResponse struct {
 	SessionId int64 `json:"sessionId"`
@@ -71,6 +103,8 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	conn.SetPongHandler(pongHandler(conn))
+
 	if session.FirstPlayerSession == nil {
 		firstPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		firstPlayerSession := MakePlayerSession(conn, firstPlayerPieceGenerator, session)
@@ -90,32 +124,17 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func MeasurePing(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	sessionId, _ := strconv.ParseInt(vars["sessionId"], 10, 64)
-	if Sessions[sessionId] == nil {
-		log.Warn("Session {} not found", sessionId)
-		return
-	}
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Warn("upgrade:", err)
-		return
-	}
-
-	go func(conn *websocket.Conn) {
-		ticker := time.NewTicker(time.Second * 3)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
-				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-					conn.Close()
-					return
-				}
-			}
+func pongHandler(conn *websocket.Conn) func(appData string) error {
+	return func(appData string) error {
+		pingUuid, _ := uuid.FromBytes([]byte(appData))
+		if startTime, containsPingUUid := PlayersPingMeasurer.getMeasure(pingUuid); containsPingUUid {
+			ping := time.Since(startTime).Milliseconds()
+			pingHist.Observe(float64(ping))
+			message := fmt.Sprintf("%d %d", 2, ping)
+			return conn.WriteMessage(websocket.TextMessage, []byte(message))
+		} else {
+			log.Warn("Ping UUID not found", pingUuid)
+			return nil
 		}
-	}(conn)
+	}
 }

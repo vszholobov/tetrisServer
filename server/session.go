@@ -68,6 +68,23 @@ func (playerSession *PlayerSession) SendMessage(message string) {
 func (playerSession *PlayerSession) RunSession() {
 	go playerSession.processPlayerInput()
 	go playerSession.processGameField()
+	go playerSession.processPlayerPing()
+}
+
+func (playerSession *PlayerSession) processPlayerPing() {
+	ticker := time.NewTicker(time.Second * 3)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			playerSession.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+			pingUuid := PlayersPingMeasurer.addMeasure()
+			pingUuidBinary, _ := pingUuid.MarshalBinary()
+			if err := playerSession.conn.WriteMessage(websocket.PingMessage, pingUuidBinary); err != nil {
+				return
+			}
+		}
+	}
 }
 
 func (playerSession *PlayerSession) processGameField() {

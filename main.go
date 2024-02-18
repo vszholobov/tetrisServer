@@ -27,7 +27,7 @@ func main() {
 	router.HandleFunc("/session", server.GetSessionsList)
 	router.HandleFunc("/session/create", server.CreateSession)
 	router.HandleFunc("/session/connect/{sessionId}", server.ConnectToSession)
-	router.HandleFunc("/session/ping/{sessionId}", server.MeasurePing)
+	//router.HandleFunc("/session/ping/{sessionId}", server.MeasurePing)
 	router.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(*server.Addr, router))
 }
