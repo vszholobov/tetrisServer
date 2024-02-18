@@ -34,7 +34,7 @@ var createdSessionsCounter = promauto.NewCounter(prometheus.CounterOpts{
 var pingHist = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name:    "ping",
 	Help:    "Ping ms distribution histogram",
-	Buckets: []float64{100, 200, 500, 1000, 2000},
+	Buckets: []float64{50, 100, 250, 500, 1000},
 })
 
 type PingMeasurer struct {
