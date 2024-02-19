@@ -113,8 +113,6 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn.SetPongHandler(pongHandler(conn))
-
 	if session.FirstPlayerSession == nil {
 		firstPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		firstPlayerSession := MakePlayerSession(conn, firstPlayerPieceGenerator, session)
@@ -122,11 +120,14 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 		log.Infof("Session %d created", sessionId)
 		createdSessionsCounter.Inc()
 	} else {
+		firstPlayerSession := session.FirstPlayerSession
 		secondPlayerPieceGenerator := rand.New(rand.NewSource(sessionId))
 		secondPlayerSession := MakePlayerSession(conn, secondPlayerPieceGenerator, session)
 		session.SecondPlayerSession = secondPlayerSession
-		session.FirstPlayerSession.EnemySession = secondPlayerSession
-		session.SecondPlayerSession.EnemySession = session.FirstPlayerSession
+		firstPlayerSession.EnemySession = secondPlayerSession
+		secondPlayerSession.EnemySession = firstPlayerSession
+		firstPlayerSession.conn.SetPongHandler(pongHandler(firstPlayerSession))
+		secondPlayerSession.conn.SetPongHandler(pongHandler(secondPlayerSession))
 		session.Started = true
 		session.RunSession()
 		runningSessionsGauge.Inc()
@@ -134,14 +135,15 @@ func ConnectToSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func pongHandler(conn *websocket.Conn) func(appData string) error {
+func pongHandler(playerSession *PlayerSession) func(appData string) error {
 	return func(appData string) error {
 		pingUuid, _ := uuid.FromBytes([]byte(appData))
 		if startTime, exists := PlayersPingMeasurer.getMeasure(pingUuid); exists {
 			ping := time.Since(startTime).Milliseconds()
 			pingHist.Observe(float64(ping))
 			message := fmt.Sprintf("%d %d", 2, ping)
-			return conn.WriteMessage(websocket.TextMessage, []byte(message))
+			playerSession.SendMessage(message)
+			return nil
 		} else {
 			log.Warn("Ping UUID not found", pingUuid)
 			return nil
