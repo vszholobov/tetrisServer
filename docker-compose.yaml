@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+  tetrisServer:
+    container_name: tetrisServer
+    image: cr.yandex/crptmbblvvfsq0d57d9q/tetris:62f7c9852c083b75111962de0a4080edaed874c1
+    ports:
+      - 8080:8080
+    restart: always
+    volumes:
+      - ./tetris-logs:/tetris-logs
+  fluentbit:
+    container_name: fluentbit
+    image: cr.yandex/yc/fluent-bit-plugin-yandex:v1.0.3-fluent-bit-1.8.6
+    ports:
+      - 24224:24224
+      - 24224:24224/udp
+    restart: always
+    environment:
+      YC_GROUP_ID: e23j5q1nhth94apeduuh
+    volumes:
+      - /etc/td-agent-bit/td-agent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - /etc/td-agent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
+      - ./tetris-logs:/tetris-logs

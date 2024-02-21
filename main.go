@@ -33,9 +33,10 @@ func main() {
 }
 
 func openLogFile() *os.File {
-	logFile := "tetris-log.txt"
+	err := os.MkdirAll("./tetris-logs", 0777)
+	logFile := "./tetris-logs/tetris-log.txt"
 	log.SetReportCaller(true)
-	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		fmt.Println("Failed to create logfile" + logFile)
 		panic(err)
